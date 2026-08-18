@@ -258,7 +258,7 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 					wm.getDefaultDisplay().getWidth(),
 					wm.getDefaultDisplay().getHeight());
 
-//			view.setFitsSystemWindows(true);
+			view.setFitsSystemWindows(true);
 //			if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) updateNavigationBar();
 
 			return view;
@@ -654,8 +654,14 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 		boolean ret = processKeyEvent(keyEvent);
 		if(!ret && mInputConnection != null) {
 			int c = keyEvent.getKeyCode();
-			mInputConnection.sendKeyEvent(keyEvent);
-			mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, c));
+			if(c == KeyEvent.KEYCODE_DEL) {
+				// 일부 앱(Google Chat 등)은 IME가 주입하는 raw KeyEvent 기반 삭제를 제대로 처리하지 못하므로
+				// press-hold 삭제(KEYCODE_NON_SHIN_DEL)와 동일하게 deleteSurroundingText로 처리한다.
+				mInputConnection.deleteSurroundingText(1, 0);
+			} else {
+				mInputConnection.sendKeyEvent(keyEvent);
+				mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, c));
+			}
 		}
 		shinShift();
 	}

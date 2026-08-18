@@ -369,6 +369,14 @@ public class DefaultSoftKeyboard extends me.blog.hgl1002.openwnn.DefaultSoftKeyb
 			return false;
 		}
 
+		public void onCancel() {
+			key.onReleased(true);
+			mKeyboardView.setPreviewEnabled(false);
+			mBackspaceLongClickHandler.removeCallbacksAndMessages(null);
+			mKeyboardView.invalidateAllKeys();
+			handler.removeCallbacksAndMessages(null);
+		}
+
 	}
 
 	class OnKeyboardViewTouchListener implements View.OnTouchListener {
@@ -397,6 +405,13 @@ public class DefaultSoftKeyboard extends me.blog.hgl1002.openwnn.DefaultSoftKeyb
 				if(point == null) return false;
 				point.onUp();
 				mTouchPoints.remove(pointerId);
+				return true;
+
+			case MotionEvent.ACTION_CANCEL:
+				for(int i = 0; i < mTouchPoints.size(); i++) {
+					mTouchPoints.valueAt(i).onCancel();
+				}
+				mTouchPoints.clear();
 				return true;
 
 			}
