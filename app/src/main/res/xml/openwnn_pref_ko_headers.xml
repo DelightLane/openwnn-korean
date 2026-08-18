@@ -4,6 +4,12 @@
 		android:fragment="com.delightlane.keyboard.SebeolHangulIMEControlPanel$InputMethodFragment"
 		android:title="@string/preference_method_setting_menu" />
 	<Preference
+		android:title="@string/preference_test_input_menu">
+		<intent
+			android:targetPackage="com.delightlane.keyboard"
+			android:targetClass="com.delightlane.keyboard.view.TestInputActivity" />
+	</Preference>
+	<Preference
 		android:fragment="com.delightlane.keyboard.SebeolHangulIMEControlPanel$KeyboardAppearanceFragment"
 		android:title="@string/preference_appearance_setting_menu" />
 	<Preference
@@ -18,10 +24,4 @@
 	<Preference
 		android:fragment="com.delightlane.keyboard.SebeolHangulIMEControlPanel$AboutFragment"
 		android:title="@string/preference_aboutime_menu" />
-	<Preference
-		android:title="@string/preference_test_input_menu">
-		<intent
-			android:targetPackage="com.delightlane.keyboard"
-			android:targetClass="com.delightlane.keyboard.view.TestInputActivity" />
-	</Preference>
 </PreferenceScreen>

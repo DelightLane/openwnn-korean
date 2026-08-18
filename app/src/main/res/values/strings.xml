@@ -100,7 +100,7 @@
     <string name="dialog_button_add">Add</string>
 
   <!-- OpenWnn Korean -->
-    <string name="delight_ime_detail">hgl1002@naver.com</string>
+    <string name="delight_ime_detail">github Lee0701/openwnn-korean 프로젝트를 포크하여 수정되었습니다.</string>
     <string name="delight_ime">디트 키보드</string>
 
   <!-- After Config Change -->

@@ -285,7 +285,7 @@
     <string name="initial_launch_help">ALT키를 길게 누르면 설정을 열 수 있습니다.</string>
 
     <!-- OpenWnn Korean -->
-    <string name="delight_ime_detail">hgl1002@naver.com</string>
+    <string name="delight_ime_detail">github Lee0701/openwnn-korean 프로젝트를 포크하여 수정되었습니다.</string>
     <string name="delight_ime">디트 키보드</string>
 
 </resources>
