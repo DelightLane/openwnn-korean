@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
 android {
-    namespace = 'me.blog.hgl1002.openwnn'
+    namespace = 'com.delightlane.keyboard'
     compileSdk = 36
 
     defaultConfig {

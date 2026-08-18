@@ -18,6 +18,6 @@
 <!-- for the Search Manager. -->
 
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
-              android:settingsActivity="me.blog.hgl1002.openwnn.SebeolHangulIMEControlPanel"
+              android:settingsActivity="com.delightlane.keyboard.SebeolHangulIMEControlPanel"
 			  android:supportsSwitchingToNextInputMethod="true"
 />

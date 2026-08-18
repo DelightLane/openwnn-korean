@@ -100,14 +100,11 @@
     <string name="dialog_button_add">Add</string>
 
   <!-- OpenWnn Korean -->
-    <string name="sebeol_hangul_ime_copyright">hgl1002@naver.com</string>
-    <string name="sebeol_hangul_ime">디트 키보드</string>
-
-    <string name="openwnn_korean_donate_title">Donate the developer</string>
-    <string name="openwnn_korean_donate_summary">Please consider donating to support the developer make better apps. Feel free to contact by hgl1002@naver.com</string>
+    <string name="delight_ime_detail">hgl1002@naver.com</string>
+    <string name="delight_ime">디트 키보드</string>
 
   <!-- After Config Change -->
-    <string name="openwnn_china_writable_dictionary">/data/data/me.blog.hgl1002.openwnn/writableZHCN.dic</string>
+    <string name="openwnn_china_writable_dictionary">/data/data/com.delightlane.keyboard/writableZHCN.dic</string>
     <string name="cn_word_separators">.,;:!?</string>
 
   <!-- Candidate Delete -->
