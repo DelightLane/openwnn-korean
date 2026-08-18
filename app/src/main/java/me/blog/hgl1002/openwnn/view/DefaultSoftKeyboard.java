@@ -465,6 +465,10 @@ public class DefaultSoftKeyboard extends me.blog.hgl1002.openwnn.DefaultSoftKeyb
 				keyList[KEYBOARD_SHIFT_OFF][KEYMODE_HANGUL][0] = loadKeyboardLayout(mIME, R.xml.keyboard_ko_12key_dubul_naratgeul);
 				break;
 
+			case "keyboard_12key_dubul_naratgeul_center":
+				keyList[KEYBOARD_SHIFT_OFF][KEYMODE_HANGUL][0] = loadKeyboardLayout(mIME, R.xml.keyboard_ko_12key_dubul_naratgeul_center);
+				break;
+
 			case "keyboard_12key_dubul_sky2":
 			case "keyboard_12key_dubul_sky2_predictive":
 				keyList[KEYBOARD_SHIFT_OFF][KEYMODE_HANGUL][0] = loadKeyboardLayout(mIME, R.xml.keyboard_ko_12key_dubul_sky2);
