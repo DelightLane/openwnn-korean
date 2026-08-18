@@ -84,6 +84,14 @@
     <string name="preference_input_learning_summary">Learn input words.</string>
 
     <string name="preference_aboutime_menu">About IME</string>
+    <string name="preference_test_input_menu">Input Test</string>
+
+    <!-- Input Test -->
+    <string name="test_input_description">Focus a field below and switch to this keyboard to try it out.</string>
+    <string name="test_input_hint_single">Single line input</string>
+    <string name="test_input_hint_multi">Multi-line input</string>
+    <string name="test_input_select_ime">Choose Input Method</string>
+    <string name="test_input_clear">Clear</string>
 
     <!-- Dialog Messages -->
     <string name="dialog_button_ok">OK</string>

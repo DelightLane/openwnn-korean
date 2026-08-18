@@ -273,6 +273,14 @@
     <string name="preference_system_force_hangul_summary">입력 상황에 관계없이 한글 키보드를 항상 먼저 보여줍니다.</string>
 
     <string name="preference_aboutime_menu">IME 정보</string>
+    <string name="preference_test_input_menu">입력 테스트</string>
+
+    <!-- Input Test -->
+    <string name="test_input_description">아래 입력창에 포커스를 준 뒤 이 키보드로 전환해서 입력해 보세요.</string>
+    <string name="test_input_hint_single">한 줄 입력</string>
+    <string name="test_input_hint_multi">여러 줄 입력</string>
+    <string name="test_input_select_ime">키보드 선택</string>
+    <string name="test_input_clear">지우기</string>
 
     <string name="initial_launch_help">ALT키를 길게 누르면 설정을 열 수 있습니다.</string>
 

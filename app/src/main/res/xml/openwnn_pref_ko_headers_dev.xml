@@ -19,6 +19,12 @@
 		android:fragment="me.blog.hgl1002.openwnn.SebeolHangulIMEControlPanel$AboutFragment"
 		android:title="@string/preference_aboutime_menu" />
 	<Preference
+		android:title="@string/preference_test_input_menu">
+		<intent
+			android:targetPackage="me.blog.hgl1002.openwnn"
+			android:targetClass="me.blog.hgl1002.openwnn.view.TestInputActivity" />
+	</Preference>
+	<Preference
 		android:fragment="me.blog.hgl1002.openwnn.SebeolHangulIMEControlPanel$DeveloperFragment"
 		android:title="@string/preference_dev_menu" />
 
