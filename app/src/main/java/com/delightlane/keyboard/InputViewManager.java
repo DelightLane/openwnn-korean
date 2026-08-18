@@ -12,6 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * This file has been modified from its original form as part of the
+ * openwnn-korean project (https://github.com/Lee0701/openwnn-korean)
+ * and this fork (delight-keyboard).
  */
 
 package com.delightlane.keyboard;

@@ -70,3 +70,23 @@ To apply the Apache License to your work, attach the following boilerplate notic
    See the License for the specific language governing permissions and
    limitations under the License.
 
+
+ADDENDUM: Attribution and Notice of Modification
+
+This software is a derivative work based on OpenWnn, originally developed
+by OMRON SOFTWARE Co., Ltd. and distributed under the Apache License,
+Version 2.0 (see above).
+
+  Copyright (C) 2008,2009  OMRON SOFTWARE Co., Ltd.
+
+It was subsequently adapted for Korean input as "openwnn-korean" by
+Hyegyu Lee (Lee0701) <hgl1002@naver.com>,
+https://github.com/Lee0701/openwnn-korean
+
+This repository is a further fork of openwnn-korean ("Delight Keyboard" /
+com.delightlane.keyboard), with modifications including but not limited to
+rebranding, application ID and package changes, UI/preference changes,
+default value changes, and bug fixes.
+
+This addendum is provided in accordance with Section 4 of the Apache
+License, Version 2.0, and does not modify the terms of the License.
