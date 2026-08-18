@@ -21,7 +21,7 @@
 	<Preference
 		android:title="@string/preference_test_input_menu">
 		<intent
-			android:targetPackage="me.blog.hgl1002.openwnn"
+			android:targetPackage="com.delightlane.keyboard"
 			android:targetClass="me.blog.hgl1002.openwnn.view.TestInputActivity" />
 	</Preference>
 </PreferenceScreen>

@@ -16,16 +16,16 @@
 <resources>
   <!-- common part -->
 
-  <string name="app_name">Sebeolsik Hangul IME</string>
-  <string name="ime_name">Sebeolsik Hangul IME</string>
+  <string name="app_name">디트 키보드</string>
+  <string name="ime_name">디트 키보드</string>
 
   <!-- Preferences -->
-    <string name="preference_ime_setting_app">OpenWnn Settings</string>
+    <string name="preference_ime_setting_app">디트 키보드 설정</string>
 
     <string name="preference_method_setting_menu">Input Method</string>
 
   <string name="preference_method_enabler_title">Enable / Disable Input Methods</string>
-    <string name="preference_method_enabler_summary">Please enable \'Sebeolsik Hangul IME\'.</string>
+    <string name="preference_method_enabler_summary">Please enable \'디트 키보드\'.</string>
     <string name="preference_method_picker_title">Show Input Method Picker</string>
 
     <string name="preference_appearance_setting_menu">Keyboard Appearance</string>
@@ -101,7 +101,7 @@
 
   <!-- OpenWnn Korean -->
     <string name="sebeol_hangul_ime_copyright">hgl1002@naver.com</string>
-    <string name="sebeol_hangul_ime">Sebeolsik Hangul IME</string>
+    <string name="sebeol_hangul_ime">디트 키보드</string>
 
     <string name="openwnn_korean_donate_title">Donate the developer</string>
     <string name="openwnn_korean_donate_summary">Please consider donating to support the developer make better apps. Feel free to contact by hgl1002@naver.com</string>

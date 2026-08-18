@@ -4,7 +4,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.blog.hgl1002.openwnn"
+        applicationId = "com.delightlane.keyboard"
         minSdk = 14
         targetSdk = 36
         versionCode = 25090801
