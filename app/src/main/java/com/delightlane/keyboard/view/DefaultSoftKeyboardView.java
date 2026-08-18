@@ -12,11 +12,13 @@ import android.inputmethodservice.KeyboardView;
 import android.util.AttributeSet;
 
 import java.lang.reflect.Field;
+import java.util.Map;
 
 public class DefaultSoftKeyboardView extends KeyboardView {
 
 	private Context context;
 	private SoftKeyboardDisplay keyboardDisplay;
+	private Map<Keyboard.Key, String> holdLabels;
 
 	public DefaultSoftKeyboardView(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -52,6 +54,31 @@ public class DefaultSoftKeyboardView extends KeyboardView {
 			}
 		}
 
+		if(holdLabels != null && !holdLabels.isEmpty()) {
+			for(Keyboard.Key key : keyboard.getKeys()) {
+				String holdLabel = holdLabels.get(key);
+				if(holdLabel != null) onDrawHoldLabel(holdLabel, canvas, key);
+			}
+		}
+
+	}
+
+	private void onDrawHoldLabel(String label, Canvas canvas, Keyboard.Key key) {
+		Paint paint = new Paint();
+		paint.setAntiAlias(true);
+		paint.setTextAlign(Paint.Align.RIGHT);
+		paint.setColor(Color.argb(180, 160, 160, 160));
+		paint.setTypeface(Typeface.DEFAULT);
+
+		float textSize = key.height * 0.26f;
+		paint.setTextSize(textSize);
+
+		float paddingRight = key.width * 0.08f;
+		float paddingTop = key.height * 0.12f;
+		float x = key.x + key.width - paddingRight;
+		float y = key.y + paddingTop + textSize;
+
+		canvas.drawText(label, x, y, paint);
 	}
 
 	private void onDrawBackground(int drawableId, boolean fixWidth, Canvas canvas, Keyboard.Key key) {
@@ -124,5 +151,9 @@ public class DefaultSoftKeyboardView extends KeyboardView {
 
 	public void setKeyboardDisplay(SoftKeyboardDisplay keyboardDisplay) {
 		this.keyboardDisplay = keyboardDisplay;
+	}
+
+	public void setHoldLabels(Map<Keyboard.Key, String> holdLabels) {
+		this.holdLabels = holdLabels;
 	}
 }

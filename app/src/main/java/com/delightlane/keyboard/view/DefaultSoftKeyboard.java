@@ -217,6 +217,9 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		}
 	}
 
+	private final Map<Keyboard.Key, String> mKeyHoldLabels = new HashMap<>();
+	public Map<Keyboard.Key, String> getKeyHoldLabels() { return mKeyHoldLabels; }
+
 	private SparseArray<TouchPoint> mTouchPoints = new SparseArray<>();
 	class TouchPoint {
 		Keyboard.Key key;
@@ -690,6 +693,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		mCurrentKeyboard = null;
 		if(mKeyboardView instanceof DefaultSoftKeyboardView) {
 			((DefaultSoftKeyboardView) mKeyboardView).setKeyboardDisplay(mKeyboardDisplays.get(skin));
+			((DefaultSoftKeyboardView) mKeyboardView).setHoldLabels(mKeyHoldLabels);
 		}
 
 		mNumKeyboardView = (KeyboardView) mIME.getLayoutInflater().inflate(id, null);
@@ -1236,6 +1240,8 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 	protected void updateLabels(Keyboard kbd, int[][] layout) {
 		if(!(kbd instanceof CustomKeyboard)) return;
+		mKeyHoldLabels.clear();
+		boolean isAltSymbols = (mCurrentKeyMode == KEYMODE_ALT_SYMBOLS);
 		if(layout == null) {
 			for(Keyboard.Key key : kbd.getKeys()) {
 				String label = getKeyLabel(key.codes[0], mShiftOn > 0);
@@ -1251,6 +1257,10 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 					int code = item[mShiftOn + 1] & 0xffff;
 					String label = getKeyLabel(code, false);
 					if(label != null) key.label = label;
+					if(isAltSymbols && item.length > 2) {
+						String holdLabel = getKeyLabel(item[2] & 0xffff, false);
+						if(holdLabel != null && !holdLabel.equals(label)) mKeyHoldLabels.put(key, holdLabel);
+					}
 					found = true;
 					break;
 				}
@@ -1273,12 +1283,15 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		default:
 			if(code >= 0) {
 				if(shift) {
+					boolean converted = false;
 					for (int[] item : SebeolHangulIME.SHIFT_CONVERT) {
 						if(item[0] == code) {
 							code = item[1];
+							converted = true;
 							break;
 						}
 					}
+					if(!converted) code = Character.toUpperCase(code);
 				}
 				if(code >= 0x1100 && code <= 0x1112) code = HangulEngine.CHO_TABLE[code - 0x1100];
 				else if(code >= 0x1161 && code <= 0x1175) code = HangulEngine.JUNG_TABLE[code - 0x1161];
