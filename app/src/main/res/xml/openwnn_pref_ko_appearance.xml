@@ -22,12 +22,12 @@
 			android:key="key_height_portrait"
 			android:title="@string/preference_key_height_portrait_title"
 			android:summary="@string/preference_key_height_portrait_summary"
-			android:defaultValue="50"/>
+			android:defaultValue="60"/>
 		<me.blog.hgl1002.openwnn.preference.IntEditTextPreference
 			android:key="key_height_landscape"
 			android:title="@string/preference_key_height_landscape_title"
 			android:summary="@string/preference_key_height_landscape_summary"
-			android:defaultValue="42"/>
+			android:defaultValue="55"/>
 		<me.blog.hgl1002.openwnn.preference.IntEditTextPreference
 			android:key="keyboard_margin_left"
 			android:title="@string/preference_keyboard_margin_left_title"

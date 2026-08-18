@@ -98,8 +98,8 @@ public class DefaultSoftKeyboard extends me.blog.hgl1002.openwnn.DefaultSoftKeyb
 
 	protected int mVibrateDuration = 30;
 
-	protected int mKeyHeightPortrait = 50;
-	protected int mKeyHeightLandscape = 42;
+	protected int mKeyHeightPortrait = 60;
+	protected int mKeyHeightLandscape = 55;
 
 	protected int mMarginLeft = 0;
 	protected int mMarginRight = 0;
