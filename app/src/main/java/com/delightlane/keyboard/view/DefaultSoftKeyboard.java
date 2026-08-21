@@ -14,6 +14,7 @@ import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.Build;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.SparseArray;
 import android.util.TypedValue;
@@ -815,10 +816,17 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 	}
 
 	private PopupWindow mClipboardMenu;
+	private long mClipboardMenuDismissedAt;
 
 	private void showClipboardMenu(View anchor) {
 		if(mClipboardMenu != null && mClipboardMenu.isShowing()) {
 			mClipboardMenu.dismiss();
+			return;
+		}
+		// 동그라미 키를 다시 눌러 팝업을 닫는 것과, 그 같은 터치가 바깥 터치로도 잡혀 곧바로
+		// dismiss()가 호출되는 경우가 겹치면 여기서 새로 열어버려 꺼졌다 켜지는 것처럼 보인다.
+		// 방금 닫힌 직후의 터치라면 재오픈하지 않고 무시한다.
+		if(SystemClock.uptimeMillis() - mClipboardMenuDismissedAt < 250) {
 			return;
 		}
 
@@ -832,8 +840,21 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		final PopupWindow popup = new PopupWindow(menu, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
 		popup.setOutsideTouchable(true);
 		popup.setTouchable(true);
+		popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
 		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-		popup.setOnDismissListener(() -> mClipboardMenu = null);
+		popup.setOnDismissListener(() -> {
+			mClipboardMenu = null;
+			mClipboardMenuDismissedAt = SystemClock.uptimeMillis();
+		});
+		// IME 창 위에서는 바깥 터치가 기본 outside-touch 처리로 항상 전달되지 않는 경우가 있어 직접 가로채서 닫는다.
+		// (동그라미 키를 다시 눌러도 이 경로로 닫힘)
+		popup.setTouchInterceptor((v, event) -> {
+			if(event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+				popup.dismiss();
+				return true;
+			}
+			return false;
+		});
 		mClipboardMenu = popup;
 
 		for(int i = 0; i < labels.length; i++) {
