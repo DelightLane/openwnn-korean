@@ -75,6 +75,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 	public static final int KEYMODE_HANGUL_JONG = 4;
 	public static final int KEYMODE_ENGLISH = 1;
 	public static final int KEYMODE_ALT_SYMBOLS = 0;
+	public static final int KEYMODE_NUMERIC_12KEY = 5;
 
 	protected KeyboardView mNumKeyboardView;
 	protected Keyboard[][][][][][] mNumKeyboard;
@@ -275,7 +276,12 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			case -10:
 				if(space == -1 && Math.abs(dx) >= mSpaceSlideSensitivity) {
 					space = keyCode;
-					nextLanguage();
+					if(mCurrentKeyMode != KEYMODE_HANGUL) {
+						// 숫자/기호 자판(123)에 있을 때는 언어를 바꾸는 대신 마지막에 쓰던 언어의 문자 자판으로 되돌아간다.
+						changeKeyMode(KEYMODE_HANGUL);
+					} else {
+						nextLanguage();
+					}
 					updateIndicator(HARD_KEYMODE_LANG + mCurrentLanguage);
 				}
 				break;
@@ -510,6 +516,10 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 				break;
 
 			}
+			keyList[KEYBOARD_SHIFT_OFF][KEYMODE_NUMERIC_12KEY][0] = loadKeyboardLayout(mIME,
+					"keyboard_12key_dubul_naratgeul_center".equals(defaultLayout)
+							? R.xml.keyboard_ko_12key_numeric_naratgeul_center
+							: R.xml.keyboard_ko_12key_numeric);
 			mCurrentKeyboards[LANG_KO] = EngineMode.get(defaultLayout);
 
 		} else {
@@ -603,6 +613,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 				break;
 
 			}
+			keyList[KEYBOARD_SHIFT_OFF][KEYMODE_NUMERIC_12KEY][0] = loadKeyboardLayout(mIME, R.xml.keyboard_ko_12key_numeric);
 			mCurrentKeyboards[LANG_EN] = EngineMode.get(defaultLayout);
 
 		}
@@ -1071,10 +1082,11 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 	@Override
 	protected void processAltKey() {
-		int altKeyMode = KEYMODE_ALT_SYMBOLS;
-		if(mCurrentKeyboardType == KEYBOARD_12KEY) {
-			altKeyMode = KEYMODE_ALT_SYMBOLS;
-		}
+		// mCurrentKeyboardType은 한/영 공용 버킷이라, 한글은 12키인데 영문은 쿼티(기본값)인 조합에서는
+		// 실제로 화면에 그려지는 자판이 쿼티이므로 12키 숫자패드가 아니라 쿼티 특수문자패드로 보내야 한다.
+		boolean is12KeyShape = mCurrentKeyboardType == KEYBOARD_12KEY
+				&& !(mCurrentLanguage == LANG_EN && mUseAlphabetQwerty);
+		int altKeyMode = is12KeyShape ? KEYMODE_NUMERIC_12KEY : KEYMODE_ALT_SYMBOLS;
 		if(mCurrentKeyMode == altKeyMode) {
 			changeKeyMode(KEYMODE_HANGUL);
 		} else {

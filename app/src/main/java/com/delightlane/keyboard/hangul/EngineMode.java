@@ -59,7 +59,7 @@ import static com.delightlane.keyboard.layout.LayoutShinSebul.JAMO_SEBUL_3_2015Y
 
 public enum EngineMode {
 
-	DIRECT(null, null, null, null, null, null),
+	DIRECT(new Properties(), null, null, null, null, (String[]) null),
 
 	SEBUL_390		(new Properties(), JAMO_SEBUL_390, null, COMB_SEBULSIK, null, "keyboard_sebul_390"),
 	SEBUL_391		(new Properties(), JAMO_SEBUL_391, null, COMB_SEBULSIK, null, "keyboard_sebul_391"),
