@@ -232,6 +232,9 @@
     <string name="preference_keyboard_use_flick_title">Use Flick</string>
     <string name="preference_keyboard_use_flick_summary">Use flick (slide) function for keyboard.</string>
 
+    <string name="preference_keyboard_use_extension_row_title">Use Extension Row</string>
+    <string name="preference_keyboard_use_extension_row_summary">Show the arrow keys and clipboard menu row above the keyboard.</string>
+
     <string name="preference_keyboard_flick_sensitivity_title">Flick Sensitivity</string>
     <string name="preference_keyboard_flick_sensitivity_summary">Adjust flick sensitivity. Default value is 100.</string>
 

@@ -8,19 +8,25 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
+import android.os.Build;
 import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.util.SparseArray;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 
 import androidx.preference.PreferenceManager;
@@ -91,6 +97,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 	protected boolean mUse12Key = false;
 	protected boolean mUseAlphabetQwerty = true;
+	protected boolean mUseExtensionRow = true;
 
 	protected boolean mUseFlick = true;
 	protected int mFlickSensitivity = DEFAULT_FLICK_SENSITIVITY;
@@ -454,6 +461,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 		mUse12Key = pref.getBoolean("keyboard_hangul_use_12key", false);
 		mUseAlphabetQwerty = pref.getBoolean("keyboard_alphabet_use_qwerty", true);
+		mUseExtensionRow = pref.getBoolean("keyboard_use_extension_row", true);
 
 		boolean use12Key = mUse12Key, useAlphabetQwerty = mUseAlphabetQwerty;
 
@@ -725,6 +733,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			if(mShowNumKeyboardViewPortrait && mDisplayMode == PORTRAIT) mMainView.addView(mNumKeyboardView);
 			if(mShowNumKeyboardViewLandscape && mDisplayMode == LANDSCAPE) mMainView.addView(mNumKeyboardView);
 		} else if (mKeyboardView != null) {
+			if(mUseExtensionRow) mMainView.addView(buildExtensionRow(skin));
 			mMainView.addView(mKeyboardView);
 		}
 		mKeyboardView.setOnTouchListener(new OnKeyboardViewTouchListener());
@@ -742,6 +751,118 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		});
 
 		return mMainView;
+	}
+
+	private LinearLayout buildExtensionRow(String skin) {
+		int rowBgColor, keyBgRes, textColor;
+		switch(skin) {
+		case "white":
+			rowBgColor = 0xFFDBDEE3;	// keybg_white_bg
+			keyBgRes = R.drawable.keybg_white_mod_def;
+			textColor = Color.BLACK;
+			break;
+
+		case "flat_dark":
+			rowBgColor = 0xFF263238;	// keybg_flat_bg
+			keyBgRes = R.drawable.keybg_flat_def;
+			textColor = 0xFFD4D6D7;
+			break;
+
+		case "flat_blue":
+			rowBgColor = 0xFF1D2047;	// keybg_blue_bg (top of gradient)
+			keyBgRes = R.drawable.keybg_blue_def;
+			textColor = Color.WHITE;
+			break;
+
+		case "dark":
+		default:
+			rowBgColor = 0xFF0A0A0A;	// keybg_dark_bg
+			keyBgRes = R.drawable.keybg_dark_mod_def;
+			textColor = Color.WHITE;
+			break;
+		}
+		LinearLayout row = new LinearLayout(mIME);
+		row.setOrientation(LinearLayout.HORIZONTAL);
+		row.setBackgroundColor(rowBgColor);
+		row.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dip(38)));
+
+		row.addView(buildExtensionKey("▲", keyBgRes, textColor, v -> onKey(KEYCODE_UP)));
+		row.addView(buildExtensionKey("▼", keyBgRes, textColor, v -> onKey(KEYCODE_DOWN)));
+		row.addView(buildExtensionKey("●", keyBgRes, textColor, this::showClipboardMenu));
+		row.addView(buildExtensionKey("◀", keyBgRes, textColor, v -> onKey(KEYCODE_LEFT)));
+		row.addView(buildExtensionKey("▶", keyBgRes, textColor, v -> onKey(KEYCODE_RIGHT)));
+
+		return row;
+	}
+
+	private TextView buildExtensionKey(String glyph, int bgRes, int textColor, View.OnClickListener listener) {
+		TextView key = new TextView(mIME);
+		key.setText(glyph);
+		key.setTextColor(textColor);
+		key.setTextSize(16);
+		key.setGravity(Gravity.CENTER);
+		key.setBackgroundResource(bgRes);
+		LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
+		lp.setMargins(dip(1), 0, dip(1), 0);
+		key.setLayoutParams(lp);
+		key.setFocusable(false);
+		key.setFocusableInTouchMode(false);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			key.setDefaultFocusHighlightEnabled(false);
+		}
+		key.setOnClickListener(listener);
+		return key;
+	}
+
+	private PopupWindow mClipboardMenu;
+
+	private void showClipboardMenu(View anchor) {
+		if(mClipboardMenu != null && mClipboardMenu.isShowing()) {
+			mClipboardMenu.dismiss();
+			return;
+		}
+
+		LinearLayout menu = new LinearLayout(mIME);
+		menu.setOrientation(LinearLayout.HORIZONTAL);
+		menu.setBackgroundColor(0xFF303030);
+
+		String[] labels = {"a", "c", "x", "v"};
+		final int[] actionIds = {android.R.id.selectAll, android.R.id.copy, android.R.id.cut, android.R.id.paste};
+
+		final PopupWindow popup = new PopupWindow(menu, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
+		popup.setOutsideTouchable(true);
+		popup.setTouchable(true);
+		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+		popup.setOnDismissListener(() -> mClipboardMenu = null);
+		mClipboardMenu = popup;
+
+		for(int i = 0; i < labels.length; i++) {
+			TextView item = new TextView(mIME);
+			item.setText(labels[i]);
+			item.setTextColor(Color.WHITE);
+			item.setTextSize(18);
+			item.setGravity(Gravity.CENTER);
+			item.setPadding(dip(20), dip(12), dip(20), dip(12));
+			final int actionId = actionIds[i];
+			item.setOnClickListener(v -> {
+				InputConnection ic = mIME.getCurrentInputConnection();
+				if(ic != null) ic.performContextMenuAction(actionId);
+				popup.dismiss();
+			});
+			menu.addView(item);
+			if(i < labels.length - 1) {
+				View divider = new View(mIME);
+				divider.setLayoutParams(new LinearLayout.LayoutParams(dip(1), ViewGroup.LayoutParams.MATCH_PARENT));
+				divider.setBackgroundColor(0x33FFFFFF);
+				menu.addView(divider);
+			}
+		}
+
+		popup.showAsDropDown(anchor, 0, 0);
+	}
+
+	private int dip(int value) {
+		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, mIME.getResources().getDisplayMetrics());
 	}
 
 	@Override
@@ -1010,6 +1131,12 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		boolean use12Key = pref.getBoolean("keyboard_hangul_use_12key", false);
 		boolean useAlphabetQwerty = pref.getBoolean("keyboard_alphabet_use_qwerty", true);
 		if(mUse12Key != use12Key || useAlphabetQwerty != mUseAlphabetQwerty) {
+			EventBus.getDefault().post(new InputViewChangeEvent());
+		}
+
+		boolean useExtensionRow = pref.getBoolean("keyboard_use_extension_row", true);
+		if(useExtensionRow != mUseExtensionRow) {
+			mUseExtensionRow = useExtensionRow;
 			EventBus.getDefault().post(new InputViewChangeEvent());
 		}
 		mLongPressTimeout = pref.getInt("keyboard_long_press_timeout", 500);

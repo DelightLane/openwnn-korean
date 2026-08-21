@@ -98,6 +98,10 @@
 			android:title="@string/preference_keyboard_use_flick_title"
 			android:summary="@string/preference_keyboard_use_flick_summary"
 			android:defaultValue="true" />
+		<CheckBoxPreference android:key="keyboard_use_extension_row"
+			android:title="@string/preference_keyboard_use_extension_row_title"
+			android:summary="@string/preference_keyboard_use_extension_row_summary"
+			android:defaultValue="true" />
 		<com.delightlane.keyboard.preference.IntEditTextPreference
 			android:key="keyboard_flick_sensitivity"
 			android:title="@string/preference_keyboard_flick_sensitivity_title"

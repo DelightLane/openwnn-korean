@@ -87,7 +87,7 @@ public class Layout12KeyDubul {
 			{-2012, DefaultSoftKeyboard.KEYCODE_KR12_ADDSTROKE-1},
 
 			// 나랏글(중앙) 배열의 좌측 기호 단축키에서 사용
-			{-2013, 0x2e, 0x2c, 0x3f, 0x21},
+			{-2013, 0x3f, 0x21},
 
 	};
 
