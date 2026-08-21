@@ -53,7 +53,6 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 	protected static final int DEFAULT_FLICK_SENSITIVITY = 100;
 
-	protected static final int SPACE_SLIDE_UNIT = 30;
 	protected static final int BACKSPACE_SLIDE_UNIT = 250;
 
 	protected static final int KEYCODE_NOP = -310;
@@ -239,7 +238,6 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		float dx, dy;
 		float beforeX, beforeY;
 		int space = -1;
-		int spaceDistance;
 		int backspace = -1;
 		int backspaceDistance;
 
@@ -275,7 +273,11 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			switch(keyCode) {
 			case KEYCODE_JP12_SPACE:
 			case -10:
-				if(Math.abs(dx) >= mSpaceSlideSensitivity) space = keyCode;
+				if(space == -1 && Math.abs(dx) >= mSpaceSlideSensitivity) {
+					space = keyCode;
+					nextLanguage();
+					updateIndicator(HARD_KEYMODE_LANG + mCurrentLanguage);
+				}
 				break;
 
 			case KEYCODE_JP12_BACKSPACE:
@@ -294,19 +296,6 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			if(dy > mFlickSensitivity || dy < -mFlickSensitivity
 					|| dx < -mFlickSensitivity || dx > mFlickSensitivity || space != -1) {
 				handler.removeCallbacksAndMessages(null);
-			}
-			if(space != -1) {
-				spaceDistance += x - beforeX;
-				if(spaceDistance < -SPACE_SLIDE_UNIT) {
-					spaceDistance = 0;
-					EventBus.getDefault().post(new InputSoftKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT)));
-					EventBus.getDefault().post(new InputSoftKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT)));
-				}
-				if(spaceDistance > +SPACE_SLIDE_UNIT) {
-					spaceDistance = 0;
-					EventBus.getDefault().post(new InputSoftKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT)));
-					EventBus.getDefault().post(new InputSoftKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT)));
-				}
 			}
 			if(backspace != -1) {
 				backspaceDistance += x - beforeX;
