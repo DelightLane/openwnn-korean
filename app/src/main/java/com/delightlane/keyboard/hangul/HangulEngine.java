@@ -243,6 +243,13 @@ public class HangulEngine {
 		if(composing.equals("")) histories.clear();
 		else histories.push(new History(cho, jung, jong, last, beforeJong, composing, lastInputType));
 
+		// 초/중/종성 없이 조합 문자만 남아있는 경우 (예: 12키 사이클 키로 입력된 특수기호).
+		// 다음 입력을 처리하기 전에 먼저 확정해서, 아직 열려있는 조합(composing) 영역이
+		// 새 입력으로 덮어써지지 않도록 한다.
+		if(cho == -1 && jung == -1 && jong == -1 && !composing.equals("")) {
+			resetComposition();
+		}
+
 		// 상태를 변환하지 않는다.
 		boolean preserveState = (code & 0xffff0000) >> 16 == 1;
 		int filteredCode = code & 0xffff;
