@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import com.delightlane.keyboard.view.DefaultSoftKeyboard;
+import com.delightlane.keyboard.layout.Layout12KeyDubul;
+import com.delightlane.keyboard.layout.LayoutAlphabet;
 import com.delightlane.keyboard.hangul.EngineMode;
 import com.delightlane.keyboard.hangul.HangulEngine;
 import com.delightlane.keyboard.hangul.HangulEngine.FinishComposingEvent;
@@ -481,7 +483,15 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 		int keyCode = event.getKeyCode();
 		if(keyCode < 0) {
 			if(keyCode <= -2000) {
-				EventBus.getDefault().post(new InputSoftKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode - 500)));
+				// 12키 자판의 각 키를 hold하면 다이얼패드처럼 해당 위치의 숫자키를 입력한다.
+				for(int[] item : Layout12KeyDubul.CYCLE_PREDICTIVE) {
+					if(item[0] == keyCode) {
+						resetCharComposition();
+						mInputConnection.commitText(String.valueOf((char) item[1]), 1);
+						resetCharComposition();
+						break;
+					}
+				}
 			}
 			switch(keyCode) {
 			case com.delightlane.keyboard.DefaultSoftKeyboard.KEYCODE_QWERTY_ALT:
@@ -493,7 +503,22 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 				break;
 			}
 		} else {
-			flickAction(mLongPressAction, keyCode);
+			DefaultSoftKeyboard softKeyboard = (DefaultSoftKeyboard) mInputViewManager;
+			boolean handled = false;
+			if(softKeyboard.mCurrentLanguage == com.delightlane.keyboard.DefaultSoftKeyboard.LANG_EN
+					&& softKeyboard.isUseAlphabetQwerty()) {
+				// 쿼티 영어 자판은 hold로 대문자를 입력하지 않고, 숫자/기호를 입력한다. 대문자는 Shift 키를 눌러 입력한다.
+				for(int[] item : LayoutAlphabet.HOLD_ENGLISH_QWERTY) {
+					if(item[0] == keyCode) {
+						resetCharComposition();
+						mInputConnection.commitText(String.valueOf((char) item[1]), 1);
+						resetCharComposition();
+						handled = true;
+						break;
+					}
+				}
+			}
+			if(!handled) flickAction(mLongPressAction, keyCode);
 		}
 	}
 

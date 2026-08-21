@@ -29,6 +29,8 @@ import org.greenrobot.eventbus.EventBus;
 
 import com.delightlane.keyboard.hangul.EngineMode;
 import com.delightlane.keyboard.hangul.HangulEngine;
+import com.delightlane.keyboard.layout.LayoutAlphabet;
+import com.delightlane.keyboard.layout.Layout12KeyDubul;
 import com.delightlane.keyboard.event.*;
 import com.delightlane.keyboard.SebeolHangulIME;
 import com.delightlane.keyboard.R;
@@ -124,7 +126,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 	protected int[] mLanguageCycleTable = {
 			LANG_EN, LANG_KO
 	};
-	int mCurrentLanguageIndex = 0;
+	int mCurrentLanguageIndex = 1;
 
 	Map<String, SoftKeyboardDisplay> mKeyboardDisplays = new HashMap<String, SoftKeyboardDisplay>() {{
 		put("dark", new SoftKeyboardDisplay() {{
@@ -879,6 +881,10 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		return mCurrentLanguageIndex;
 	}
 
+	public boolean isUseAlphabetQwerty() {
+		return mUseAlphabetQwerty;
+	}
+
 	public void setLanguage(int languageId) {
 		mCurrentLanguageIndex = languageId;
 		mCurrentLanguage = mLanguageCycleTable[languageId];
@@ -1225,7 +1231,10 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 	public void updateKeyLabels() {
 		if(mCurrentKeyboardType == KEYBOARD_12KEY
 				&& mCurrentKeyMode != KEYMODE_ALT_SYMBOLS
-				&& !(mCurrentLanguage == LANG_EN && mUseAlphabetQwerty)) return;
+				&& !(mCurrentLanguage == LANG_EN && mUseAlphabetQwerty)) {
+			updateTwelveKeyHoldLabels();
+			return;
+		}
 		int[][] layout;
 		if(mCurrentKeyMode != KEYMODE_ALT_SYMBOLS) {
 			HangulEngine hangulEngine = mIME.getHangulEngine();
@@ -1242,10 +1251,12 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		if(!(kbd instanceof CustomKeyboard)) return;
 		mKeyHoldLabels.clear();
 		boolean isAltSymbols = (mCurrentKeyMode == KEYMODE_ALT_SYMBOLS);
+		boolean isEnglishQwerty = (mCurrentLanguage == LANG_EN && mUseAlphabetQwerty && !isAltSymbols);
 		if(layout == null) {
 			for(Keyboard.Key key : kbd.getKeys()) {
 				String label = getKeyLabel(key.codes[0], mShiftOn > 0);
 				if(label != null) key.label = label;
+				if(isEnglishQwerty) putEnglishQwertyHoldLabel(key);
 			}
 			return;
 		}
@@ -1268,6 +1279,32 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			if(!found) {
 				String label = getKeyLabel(key.codes[0], mShiftOn > 0);
 				if(label != null) key.label = label;
+			}
+			if(isEnglishQwerty) putEnglishQwertyHoldLabel(key);
+		}
+	}
+
+	// 12키 자판은 XML의 정적 라벨을 그대로 쓰므로 key.label은 건드리지 않고, hold 시 입력되는 숫자만 우상단에 표시한다.
+	private void updateTwelveKeyHoldLabels() {
+		Keyboard kbd = mKeyboard[mCurrentLanguage][mDisplayMode][mCurrentKeyboardType][mShiftOn][mCurrentKeyMode][0];
+		if(!(kbd instanceof CustomKeyboard)) return;
+		mKeyHoldLabels.clear();
+		for(Keyboard.Key key : kbd.getKeys()) {
+			for(int[] item : Layout12KeyDubul.CYCLE_PREDICTIVE) {
+				if(item[0] == key.codes[0]) {
+					mKeyHoldLabels.put(key, String.valueOf((char) item[1]));
+					break;
+				}
+			}
+		}
+		mKeyboardView.invalidateAllKeys();
+	}
+
+	private void putEnglishQwertyHoldLabel(Keyboard.Key key) {
+		for(int[] item : LayoutAlphabet.HOLD_ENGLISH_QWERTY) {
+			if(item[0] == key.codes[0]) {
+				mKeyHoldLabels.put(key, String.valueOf((char) item[1]));
+				break;
 			}
 		}
 	}
