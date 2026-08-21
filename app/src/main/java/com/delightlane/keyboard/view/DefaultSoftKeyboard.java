@@ -26,6 +26,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -115,12 +116,13 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 	protected int mMarginRight = 0;
 	protected int mMarginBottom = 0;
 
-	protected boolean mOneHandedMode;
-	protected int mOneHandedRatio;
-	protected boolean mOneHandedSide;
-
 	public static final boolean ONE_HAND_LEFT = false;
 	public static final boolean ONE_HAND_RIGHT = true;
+
+	protected boolean mOneHandedMode;
+	protected int mOneHandedRatio;
+	// 오른손 한손 모드를 기본값으로 사용한다.
+	protected boolean mOneHandedSide = ONE_HAND_RIGHT;
 
 	protected boolean mShowSubView = true;
 
@@ -458,6 +460,12 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		mUse12Key = pref.getBoolean("keyboard_hangul_use_12key", false);
 		mUseAlphabetQwerty = pref.getBoolean("keyboard_alphabet_use_qwerty", true);
 		mUseExtensionRow = pref.getBoolean("keyboard_use_extension_row", true);
+		// LANGKEY_TOGGLE_ONE_HAND_MODE 같은 빠른 토글 액션은 preference만 바꾸고 InputViewChangeEvent를
+		// 바로 posting하는데, 그 이벤트로 다시 불리는 initView()/createKeyboards()에서 preference를
+		// 새로 읽지 않으면 mOneHandedMode가 오래된 값에 머물러 화면이 갱신되지 않는다. 다른 mUse12Key 등과
+		// 마찬가지로 매번 새로 읽어와야 한다.
+		mOneHandedMode = pref.getBoolean("keyboard_one_hand", false);
+		mOneHandedRatio = readOneHandedRatio(pref);
 
 		boolean use12Key = mUse12Key, useAlphabetQwerty = mUseAlphabetQwerty;
 
@@ -735,7 +743,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			if(mShowNumKeyboardViewLandscape && mDisplayMode == LANDSCAPE) mMainView.addView(mNumKeyboardView);
 		} else if (mKeyboardView != null) {
 			if(mUseExtensionRow) mMainView.addView(buildExtensionRow(skin));
-			mMainView.addView(mKeyboardView);
+			mMainView.addView(buildKeyboardArea(skin));
 		}
 		mKeyboardView.setOnTouchListener(new OnKeyboardViewTouchListener());
 		mNumKeyboardView.setOnTouchListener(new OnKeyboardViewTouchListener());
@@ -750,6 +758,17 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			}
 			return false;
 		});
+
+		// mKeyboardView는 여기서 막 새로 inflate된 상태라 아직 실제 Keyboard가 배정되어 있지 않다.
+		// 원래는 이후 onStartInputView()의 setPreferences() -> setDefaultKeyboard()에서 배정되지만,
+		// LANGKEY_TOGGLE_ONE_HAND_MODE 같은 빠른 토글 액션은 setPreferences() 없이 InputViewChangeEvent만
+		// 곧바로 posting해서 initView()를 다시 부른다. 그 경로에서는 Keyboard가 끝내 배정되지 않아
+		// KeyboardView가 계속 크기 0으로 남는다(안드로이드 KeyboardView는 Keyboard가 없으면 padding만큼만
+		// 그린다). changeKeyMode()를 그대로 다시 부르면 시프트 키 이벤트/엔진 모드 변경 이벤트까지
+		// 다시 브로드캐스트되어 부작용이 생기므로, 지금 모드에 맞는 Keyboard만 조용히 다시 배정한다.
+		if(mCurrentKeyMode != INVALID_KEYMODE) {
+			changeKeyboard(getModeChangeKeyboard(mCurrentKeyMode));
+		}
 
 		return mMainView;
 	}
@@ -794,6 +813,119 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		row.addView(buildExtensionKey("▶", keyBgRes, textColor, v -> onKey(KEYCODE_RIGHT)));
 
 		return row;
+	}
+
+	// 한손 모드일 때는 키보드 뷰 위에 빈 공간 전환용 삼각형 키를 겹쳐 그린다.
+	private View buildKeyboardArea(String skin) {
+		if(!mOneHandedMode) return mKeyboardView;
+
+		FrameLayout frame = new FrameLayout(mIME);
+		frame.setLayoutParams(new LinearLayout.LayoutParams(
+				LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+		// 이 시점에는 mKeyboardView에 실제 Keyboard가 아직 배정되지 않은 상태다(배정은 이후
+		// setPreferences() 쪽에서 이뤄진다). 그래서 높이를 wrap_content로만 두면 Keyboard가 배정된
+		// 뒤에야 한 번 더 레이아웃이 갱신되고, 그 사이 프레임이 빈 상태(0에 가까운 높이)로 잠깐
+		// 그려졌다가 뒤늦게 채워지는 경우가 생긴다. createKeyboards()가 이미 만들어 둔 키보드 중
+		// 하나에서 높이를 미리 읽어와 처음부터 정확한 크기로 고정해두면 그 빈 프레임이 보이지 않는다.
+		int estimatedHeight = estimateKeyboardHeight();
+		FrameLayout.LayoutParams kbdParams = (estimatedHeight > 0)
+				? new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, estimatedHeight)
+				: new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+		mKeyboardView.setLayoutParams(kbdParams);
+
+		frame.addView(mKeyboardView);
+		frame.addView(buildOneHandSwitchKey(skin));
+		return frame;
+	}
+
+	private static final int ONE_HANDED_RATIO_DEFAULT = 67;
+	private static final String LEGACY_ONE_HANDED_RATIO_DEFAULT_MIGRATED_KEY = "keyboard_one_hand_ratio_default_migrated";
+
+	// 예전 버전은 한손 모드 크기 기본값이 90(거의 안 좁혀짐)이었다. 설정 화면을 한 번이라도 열었던
+	// 사용자는 그 예전 기본값이 preference에 실제로 저장되어 있어서, XML/코드의 기본값만 2/3로
+	// 바꿔도 적용되지 않는다. 사용자가 직접 다른 값으로 바꾼 적이 없어 보이는(예전 기본값 그대로인)
+	// 경우에 한해 딱 한 번만 새 기본값(2/3)로 옮겨준다.
+	private int readOneHandedRatio(SharedPreferences pref) {
+		if(!pref.contains(LEGACY_ONE_HANDED_RATIO_DEFAULT_MIGRATED_KEY)) {
+			SharedPreferences.Editor editor = pref.edit();
+			if(pref.getInt("keyboard_one_hand_ratio", ONE_HANDED_RATIO_DEFAULT) == 90) {
+				editor.putInt("keyboard_one_hand_ratio", ONE_HANDED_RATIO_DEFAULT);
+			}
+			editor.putBoolean(LEGACY_ONE_HANDED_RATIO_DEFAULT_MIGRATED_KEY, true);
+			editor.apply();
+		}
+		return pref.getInt("keyboard_one_hand_ratio", ONE_HANDED_RATIO_DEFAULT);
+	}
+
+	private int estimateKeyboardHeight() {
+		try {
+			Keyboard kbd = mKeyboard[mCurrentLanguage][mDisplayMode][mCurrentKeyboardType][KEYBOARD_SHIFT_OFF][KEYMODE_HANGUL][0];
+			return kbd != null ? kbd.getHeight() : -1;
+		} catch (Exception ex) {
+			return -1;
+		}
+	}
+
+	private View buildOneHandSwitchKey(String skin) {
+		int bgColor, textColor;
+		switch(skin) {
+		case "white":
+			bgColor = 0xFFDBDEE3;	// keybg_white_bg
+			textColor = Color.BLACK;
+			break;
+
+		case "flat_dark":
+			bgColor = 0xFF263238;	// keybg_flat_bg
+			textColor = 0xFFD4D6D7;
+			break;
+
+		case "flat_blue":
+			bgColor = 0xFF1D2047;	// keybg_blue_bg (top of gradient)
+			textColor = Color.WHITE;
+			break;
+
+		case "dark":
+		default:
+			bgColor = 0xFF0A0A0A;	// keybg_dark_bg
+			textColor = Color.WHITE;
+			break;
+		}
+
+		// 키가 오른쪽으로 치우쳐 있으면 빈 공간은 왼쪽에 있으므로, 눌렀을 때 그쪽으로
+		// 옮겨간다는 뜻으로 왼쪽 삼각형을 보여준다. 반대쪽도 마찬가지 논리다.
+		boolean keysOnRight = (mOneHandedSide == ONE_HAND_RIGHT);
+		String glyph = keysOnRight ? "◀" : "▶";
+
+		int screenWidth = mIME.getResources().getDisplayMetrics().widthPixels;
+		int emptyWidth = (int) (screenWidth * (1d - mOneHandedRatio / 100d));
+		int minWidth = dip(28);
+		if(emptyWidth < minWidth) emptyWidth = minWidth;
+
+		int keyHeight = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
+				(mDisplayMode == PORTRAIT) ? mKeyHeightPortrait : mKeyHeightLandscape,
+				mIME.getResources().getDisplayMetrics());
+
+		TextView key = new TextView(mIME);
+		key.setText(glyph);
+		key.setTextColor(textColor);
+		key.setTextSize(16);
+		key.setGravity(Gravity.CENTER);
+		key.setBackgroundColor(bgColor);
+
+		// 빈 공간 전체 높이로 늘어나면 세로로 길쭉해 보이니, 키 한 줄 높이만큼만 잡고
+		// 세로 중앙에 오도록 한다.
+		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(emptyWidth, keyHeight);
+		lp.gravity = (keysOnRight ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL;
+		key.setLayoutParams(lp);
+
+		key.setFocusable(false);
+		key.setFocusableInTouchMode(false);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			key.setDefaultFocusHighlightEnabled(false);
+		}
+		key.setOnClickListener(v -> toggleOneHandedSide());
+		return key;
 	}
 
 	private TextView buildExtensionKey(String glyph, int bgRes, int textColor, View.OnClickListener listener) {
@@ -898,15 +1030,31 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 	@Override
 	public void swipeRight() {
-		if(!mOneHandedMode) return;
-		this.mOneHandedSide = ONE_HAND_RIGHT;
-		EventBus.getDefault().post(new InputViewChangeEvent());
+		swipeOneHandedMode(ONE_HAND_RIGHT);
 	}
 
 	@Override
 	public void swipeLeft() {
-		if(!mOneHandedMode) return;
-		this.mOneHandedSide = ONE_HAND_LEFT;
+		swipeOneHandedMode(ONE_HAND_LEFT);
+	}
+
+	// 키보드 전체를 오른쪽/왼쪽으로 스와이프하면 그 방향에 해당하는 한손 모드로 들어간다.
+	// 이미 그 방향의 한손 모드라면 다시 같은 방향으로 스와이프했을 때 일반 모드로 돌아간다.
+	private void swipeOneHandedMode(boolean side) {
+		if(mOneHandedMode && mOneHandedSide == side) {
+			mOneHandedMode = false;
+		} else {
+			mOneHandedMode = true;
+			mOneHandedSide = side;
+		}
+		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(mIME);
+		pref.edit().putBoolean("keyboard_one_hand", mOneHandedMode).apply();
+		EventBus.getDefault().post(new InputViewChangeEvent());
+	}
+
+	// 한손 모드 프레임의 빈 공간을 눌러 왼쪽/오른쪽으로 치우친 배치를 바꾼다.
+	private void toggleOneHandedSide() {
+		mOneHandedSide = !mOneHandedSide;
 		EventBus.getDefault().post(new InputViewChangeEvent());
 	}
 
@@ -1143,7 +1291,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			EventBus.getDefault().post(new InputViewChangeEvent());
 		}
 		boolean oneHandedMode = pref.getBoolean("keyboard_one_hand", false);
-		int oneHandedRatio = pref.getInt("keyboard_one_hand_ratio", 100);
+		int oneHandedRatio = readOneHandedRatio(pref);
 		if(oneHandedMode != mOneHandedMode || oneHandedRatio != mOneHandedRatio) {
 			mOneHandedMode = oneHandedMode;
 			mOneHandedRatio = oneHandedRatio;

@@ -17,6 +17,8 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
@@ -674,6 +676,16 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 			}
 			shinShift();
 			return;
+
+		case KeyEvent.KEYCODE_DPAD_LEFT:
+		case KeyEvent.KEYCODE_DPAD_RIGHT:
+		case KeyEvent.KEYCODE_DPAD_UP:
+		case KeyEvent.KEYCODE_DPAD_DOWN:
+			// 확장 방향키를 raw KeyEvent로 그대로 보내면 앱에 따라 뷰 포커스 이동/화면 스크롤로 새는 경우가 있다.
+			// 커서를 입력 필드의 텍스트 안에서만 직접 옮겨서 항상 입력 블럭 내부에서만 동작하도록 한다.
+			resetCharComposition();
+			if(moveCursorWithinInput(keyEvent.getKeyCode())) return;
+			break;
 		}
         System.out.println();
 		boolean ret = processKeyEvent(keyEvent);
@@ -689,6 +701,68 @@ public class SebeolHangulIME extends InputMethodService implements HangulEngineL
 			}
 		}
 		shinShift();
+	}
+
+	/**
+	 * 커서를 raw KeyEvent 전달 없이 InputConnection의 텍스트 안에서 직접 옮긴다.
+	 * 대상 앱이 텍스트 추출을 지원하지 않으면 false를 돌려주어 호출부가 기존 방식(raw KeyEvent)으로 대체하게 한다.
+	 */
+	private boolean moveCursorWithinInput(int keyCode) {
+		if(mInputConnection == null) return false;
+		ExtractedText et = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+		if(et == null || et.text == null) return false;
+
+		String text = et.text.toString();
+		int pos = et.selectionStart;
+		if(pos < 0 || pos > text.length()) return false;
+
+		int newPos;
+		switch(keyCode) {
+		case KeyEvent.KEYCODE_DPAD_LEFT:
+			if(pos <= 0) return true;
+			newPos = pos - 1;
+			break;
+
+		case KeyEvent.KEYCODE_DPAD_RIGHT:
+			if(pos >= text.length()) return true;
+			newPos = pos + 1;
+			break;
+
+		case KeyEvent.KEYCODE_DPAD_UP: {
+			int lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+			if(lineStart == 0) {
+				newPos = 0;
+			} else {
+				int col = pos - lineStart;
+				int prevLineEnd = lineStart - 1;
+				int prevLineStart = text.lastIndexOf('\n', prevLineEnd - 1) + 1;
+				newPos = prevLineStart + Math.min(col, prevLineEnd - prevLineStart);
+			}
+			break;
+		}
+
+		case KeyEvent.KEYCODE_DPAD_DOWN: {
+			int lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+			int col = pos - lineStart;
+			int nextNewline = text.indexOf('\n', pos);
+			if(nextNewline == -1) {
+				newPos = text.length();
+			} else {
+				int nextLineStart = nextNewline + 1;
+				int afterNextNewline = text.indexOf('\n', nextLineStart);
+				int nextLineEnd = (afterNextNewline == -1) ? text.length() : afterNextNewline;
+				newPos = nextLineStart + Math.min(col, nextLineEnd - nextLineStart);
+			}
+			break;
+		}
+
+		default:
+			return false;
+		}
+
+		int absPos = et.startOffset + newPos;
+		mInputConnection.setSelection(absPos, absPos);
+		return true;
 	}
 
 	@Subscribe
