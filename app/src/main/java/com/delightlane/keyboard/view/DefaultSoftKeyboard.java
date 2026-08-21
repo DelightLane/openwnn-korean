@@ -14,7 +14,6 @@ import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.os.Build;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.SparseArray;
 import android.util.TypedValue;
@@ -23,6 +22,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.Button;
@@ -808,7 +808,7 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 
 		row.addView(buildExtensionKey("▲", keyBgRes, textColor, v -> onKey(KEYCODE_UP)));
 		row.addView(buildExtensionKey("▼", keyBgRes, textColor, v -> onKey(KEYCODE_DOWN)));
-		row.addView(buildExtensionKey("●", keyBgRes, textColor, this::showClipboardMenu));
+		row.addView(buildExtensionKey("●", keyBgRes, textColor, this::handleClipboardCircleTouch));
 		row.addView(buildExtensionKey("◀", keyBgRes, textColor, v -> onKey(KEYCODE_LEFT)));
 		row.addView(buildExtensionKey("▶", keyBgRes, textColor, v -> onKey(KEYCODE_RIGHT)));
 
@@ -947,63 +947,75 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 		return key;
 	}
 
-	private PopupWindow mClipboardMenu;
-	private long mClipboardMenuDismissedAt;
+	private TextView buildExtensionKey(String glyph, int bgRes, int textColor, View.OnTouchListener listener) {
+		TextView key = new TextView(mIME);
+		key.setText(glyph);
+		key.setTextColor(textColor);
+		key.setTextSize(16);
+		key.setGravity(Gravity.CENTER);
+		key.setBackgroundResource(bgRes);
+		LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
+		lp.setMargins(dip(1), 0, dip(1), 0);
+		key.setLayoutParams(lp);
+		key.setFocusable(false);
+		key.setFocusableInTouchMode(false);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			key.setDefaultFocusHighlightEnabled(false);
+		}
+		key.setOnTouchListener(listener);
+		return key;
+	}
 
-	private void showClipboardMenu(View anchor) {
-		if(mClipboardMenu != null && mClipboardMenu.isShowing()) {
-			mClipboardMenu.dismiss();
-			return;
+	private static final String[] CLIPBOARD_MENU_LABELS = {"a", "c", "x", "v"};
+	private static final int[] CLIPBOARD_MENU_ACTIONS = {android.R.id.selectAll, android.R.id.copy, android.R.id.cut, android.R.id.paste};
+
+	private PopupWindow mClipboardMenu;
+	private TextView[] mClipboardMenuItems;
+	private int mClipboardMenuSelectedIndex = -1;
+	private float mClipboardMenuDownRawX;
+
+	// 동그라미 키는 클릭 토글이 아니라 홀드 방식으로 동작한다: 누르고 있는 동안에만 메뉴가 뜨고,
+	// 좌우로 끌어서 항목을 고른 뒤 손을 떼면 그 시점에 선택돼 있던 항목이 실행된다.
+	private boolean handleClipboardCircleTouch(View anchor, MotionEvent event) {
+		switch(event.getActionMasked()) {
+		case MotionEvent.ACTION_DOWN:
+			mClipboardMenuDownRawX = event.getRawX();
+			openClipboardMenu(anchor);
+			return true;
+
+		case MotionEvent.ACTION_MOVE:
+			setClipboardMenuSelection(findClipboardMenuIndexForRawX(event.getRawX()));
+			return true;
+
+		case MotionEvent.ACTION_UP:
+			executeClipboardMenuSelection();
+			return true;
+
+		case MotionEvent.ACTION_CANCEL:
+			dismissClipboardMenu();
+			return true;
 		}
-		// 동그라미 키를 다시 눌러 팝업을 닫는 것과, 그 같은 터치가 바깥 터치로도 잡혀 곧바로
-		// dismiss()가 호출되는 경우가 겹치면 여기서 새로 열어버려 꺼졌다 켜지는 것처럼 보인다.
-		// 방금 닫힌 직후의 터치라면 재오픈하지 않고 무시한다.
-		if(SystemClock.uptimeMillis() - mClipboardMenuDismissedAt < 250) {
-			return;
-		}
+		return false;
+	}
+
+	private void openClipboardMenu(View anchor) {
+		dismissClipboardMenu();
 
 		LinearLayout menu = new LinearLayout(mIME);
 		menu.setOrientation(LinearLayout.HORIZONTAL);
 		menu.setBackgroundColor(0xFF303030);
 
-		String[] labels = {"a", "c", "x", "v"};
-		final int[] actionIds = {android.R.id.selectAll, android.R.id.copy, android.R.id.cut, android.R.id.paste};
-
-		final PopupWindow popup = new PopupWindow(menu, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
-		popup.setOutsideTouchable(true);
-		popup.setTouchable(true);
-		popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
-		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-		popup.setOnDismissListener(() -> {
-			mClipboardMenu = null;
-			mClipboardMenuDismissedAt = SystemClock.uptimeMillis();
-		});
-		// IME 창 위에서는 바깥 터치가 기본 outside-touch 처리로 항상 전달되지 않는 경우가 있어 직접 가로채서 닫는다.
-		// (동그라미 키를 다시 눌러도 이 경로로 닫힘)
-		popup.setTouchInterceptor((v, event) -> {
-			if(event.getAction() == MotionEvent.ACTION_OUTSIDE) {
-				popup.dismiss();
-				return true;
-			}
-			return false;
-		});
-		mClipboardMenu = popup;
-
-		for(int i = 0; i < labels.length; i++) {
+		mClipboardMenuItems = new TextView[CLIPBOARD_MENU_LABELS.length];
+		for(int i = 0; i < CLIPBOARD_MENU_LABELS.length; i++) {
 			TextView item = new TextView(mIME);
-			item.setText(labels[i]);
+			item.setText(CLIPBOARD_MENU_LABELS[i]);
 			item.setTextColor(Color.WHITE);
 			item.setTextSize(18);
 			item.setGravity(Gravity.CENTER);
 			item.setPadding(dip(20), dip(12), dip(20), dip(12));
-			final int actionId = actionIds[i];
-			item.setOnClickListener(v -> {
-				InputConnection ic = mIME.getCurrentInputConnection();
-				if(ic != null) ic.performContextMenuAction(actionId);
-				popup.dismiss();
-			});
+			mClipboardMenuItems[i] = item;
 			menu.addView(item);
-			if(i < labels.length - 1) {
+			if(i < CLIPBOARD_MENU_LABELS.length - 1) {
 				View divider = new View(mIME);
 				divider.setLayoutParams(new LinearLayout.LayoutParams(dip(1), ViewGroup.LayoutParams.MATCH_PARENT));
 				divider.setBackgroundColor(0x33FFFFFF);
@@ -1011,7 +1023,84 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			}
 		}
 
-		popup.showAsDropDown(anchor, 0, 0);
+		final PopupWindow popup = new PopupWindow(menu, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
+		// 홀드하는 동안 떠 있는 순수 오버레이라 별도로 터치를 받을 필요가 없다. 모든 입력은
+		// 처음 ACTION_DOWN을 받은 동그라미 키(anchor)가 계속 받아 처리한다.
+		popup.setFocusable(false);
+		popup.setTouchable(false);
+		popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+		popup.setOnDismissListener(() -> {
+			mClipboardMenu = null;
+			mClipboardMenuItems = null;
+			mClipboardMenuSelectedIndex = -1;
+		});
+		mClipboardMenu = popup;
+
+		// 동그라미 버튼 상단에 뜨도록, 팝업 높이만큼 위로 띄운다.
+		menu.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+		int popupHeight = menu.getMeasuredHeight();
+		popup.showAsDropDown(anchor, 0, -(anchor.getHeight() + popupHeight));
+
+		// showAsDropDown 직후에는 항목 뷰들이 아직 실제 화면 좌표/크기를 갖지 못한 상태라,
+		// 레이아웃이 실제로 끝난 뒤(onGlobalLayout)에야 누른 지점 기준 초기 선택을 계산할 수 있다.
+		menu.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+			@Override
+			public void onGlobalLayout() {
+				menu.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+				if(mClipboardMenu == popup) {
+					setClipboardMenuSelection(findClipboardMenuIndexForRawX(mClipboardMenuDownRawX));
+				}
+			}
+		});
+	}
+
+	private int findClipboardMenuIndexForRawX(float rawX) {
+		if(mClipboardMenuItems == null || mClipboardMenuItems.length == 0) return -1;
+
+		int[] loc = new int[2];
+		int nearestIndex = 0;
+		int nearestDistance = Integer.MAX_VALUE;
+		for(int i = 0; i < mClipboardMenuItems.length; i++) {
+			TextView item = mClipboardMenuItems[i];
+			item.getLocationOnScreen(loc);
+			int left = loc[0];
+			int right = left + item.getWidth();
+			if(rawX >= left && rawX <= right) return i;
+			int distance = (rawX < left) ? (int) (left - rawX) : (int) (rawX - right);
+			if(distance < nearestDistance) {
+				nearestDistance = distance;
+				nearestIndex = i;
+			}
+		}
+		return nearestIndex;
+	}
+
+	private void setClipboardMenuSelection(int index) {
+		if(mClipboardMenuItems == null || index == mClipboardMenuSelectedIndex) return;
+
+		for(int i = 0; i < mClipboardMenuItems.length; i++) {
+			mClipboardMenuItems[i].setBackgroundColor(i == index ? 0xFF5A5A5A : Color.TRANSPARENT);
+		}
+		mClipboardMenuSelectedIndex = index;
+		if(mVibrator != null) {
+			try { mVibrator.vibrate(20); } catch (Exception ex) { }
+		}
+	}
+
+	private void executeClipboardMenuSelection() {
+		int index = mClipboardMenuSelectedIndex;
+		dismissClipboardMenu();
+		if(index < 0 || index >= CLIPBOARD_MENU_ACTIONS.length) return;
+
+		InputConnection ic = mIME.getCurrentInputConnection();
+		if(ic != null) ic.performContextMenuAction(CLIPBOARD_MENU_ACTIONS[index]);
+	}
+
+	private void dismissClipboardMenu() {
+		if(mClipboardMenu != null) {
+			mClipboardMenu.dismiss();
+		}
 	}
 
 	private int dip(int value) {
