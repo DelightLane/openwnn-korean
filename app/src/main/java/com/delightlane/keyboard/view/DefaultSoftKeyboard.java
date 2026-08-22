@@ -259,7 +259,8 @@ public class DefaultSoftKeyboard extends com.delightlane.keyboard.DefaultSoftKey
 			setPreviewEnabled(keyCode);
 
 			handler = new Handler();
-			handler.postDelayed(longClickHandler = new LongClickHandler(keyCode), mLongPressTimeout);
+			// 홀드키 입력은 사용자가 설정한 시간의 절반만 홀드해도 동작하도록 한다.
+			handler.postDelayed(longClickHandler = new LongClickHandler(keyCode), mLongPressTimeout / 2);
 
 			/* key click sound & vibration */
 			if (mVibrator != null) {

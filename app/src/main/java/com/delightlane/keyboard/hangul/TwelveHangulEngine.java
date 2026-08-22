@@ -172,9 +172,13 @@ public class TwelveHangulEngine extends HangulEngine {
 
 	@Override
 	public boolean backspace() {
-		addStrokeBase = addStrokeBaseCombined = 0;
+		boolean result = super.backspace();
 		resetCycle();
-		return super.backspace();
+		// 백스페이스 후 남아있는 자모를 기준으로 획추가 기준점을 다시 잡는다.
+		// (그렇지 않으면 삭제 후 자음만 남은 상태에서 획추가 키가 동작하지 않는다.)
+		addStrokeBase = last;
+		addStrokeBaseCombined = isCho(last) ? cho + 0x1100 : isJung(last) ? jung + 0x1161 : isJong(last) ? jong + 0x11a7 : 0;
+		return result;
 	}
 
 	public void eraseJamo() {
